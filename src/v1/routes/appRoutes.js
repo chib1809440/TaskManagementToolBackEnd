@@ -7,6 +7,7 @@ const projectAppRouter = require('./app/project.route')
 const listNameAppRouter = require('./app/listName.route')
 const taskAppRouter = require('./app/task.route')
 const ActivityAppRouter = require('./app/activity.route')
+const StatisticalAppRouter = require('./app/statistical.route')
 
 
 // @@app api
@@ -16,5 +17,5 @@ router.use('/projects', projectAppRouter)
 router.use('/listNames', listNameAppRouter)
 router.use('/tasks', taskAppRouter)
 router.use('/activity', ActivityAppRouter)
-
+router.use('/statistical', StatisticalAppRouter)
 module.exports = router

@@ -9,8 +9,8 @@ exports.getAction = async (req, res) => {
         let result = []
         if (req.query.owner) {
             result = await Activity.find({ owner: req.query.owner })
-        } else if (req.query._id) {
-            result = await Activity.find({ _id: req.query._id })
+        } else if (req.query.taskId) {
+            result = await Activity.find({ taskId: req.query.taskId })
         } else {
             result = await Activity.find()
         }

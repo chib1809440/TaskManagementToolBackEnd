@@ -43,13 +43,17 @@ const TasksSchema = new Schema({
         type: String
     },
     duration: {
-        type: Number
+        type: Number,
     },
     taskDescription: {
         type: String
     },
     checkList: {
         type: Array
+    },
+    isDone: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true })
 

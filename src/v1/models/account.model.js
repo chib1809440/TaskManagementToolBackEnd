@@ -28,7 +28,7 @@ const AccountSchema = new Schema({
 AccountSchema.set('toJSON', {
     transform: function (doc, ret) {
 
-        delete ret.password
+        // delete ret.password
     }
 })
 

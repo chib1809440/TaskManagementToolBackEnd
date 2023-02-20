@@ -1,6 +1,8 @@
 const Project = require('../models/project.model')
 const ListName = require('../models/listName.model')
 const Task = require('../models/tasks.model')
+const Activity = require('../models/activity.model')
+const Account = require('../models/account.model')
 const BadRequestError = require('../../error/BadRequestError')
 
 exports.createProject = async (req, res) => {
@@ -177,7 +179,7 @@ exports.createTask = async (req, res) => {
         const getNameList = await ListName.findOne({ _id: req.body.listNameId })
         req.body.listName = getNameList.listName
         const result = await Task.create(req.body)
-        result && res.status(200).json("Create Task successfully")
+        result && res.status(200).json(result)
     } catch (err) {
         return res.status(400).json(err.message)
     }
@@ -194,6 +196,8 @@ exports.getTask = async (req, res) => {
         } else if (req.query.listNameID) {
             result = await Task.find({ listNameID: req.query.listNameID })
         }
+        const getActivity = await Activity.find({ taskId: req.query._id })
+        console.log('getActivity: ', getActivity)
         result && res.status(200).json(result)
     } catch (err) {
         return res.status(400).json(err.message)
@@ -202,7 +206,6 @@ exports.getTask = async (req, res) => {
 
 exports.updateTask = async (req, res) => {
     try {
-        console.log("req.body: ", req.body)
         if (!req.body._id) {
             throw new BadRequestError("Missing Id of task to update")
         }
@@ -213,11 +216,244 @@ exports.updateTask = async (req, res) => {
         };
         if (req.body.startDate && req.body.endDate) {
             req.body.duration = get_day_of_time(new Date(req.body.startDate), new Date(req.body.endDate))
-            req.body.storyPointEstimate = Math.round(req.body.duration / 2)
+            req.body.storyPointEstimate = Math.round(req.body.duration / 2) >= 1 ? Math.round(req.body.duration / 2) : 1
         }
 
-        const result = await Task.findOneAndUpdate({ _id: req.body._id }, req.body)
+        const result = await Task.findOneAndUpdate({ _id: req.body._id }, { ...req.body })
+        if (req.body.isDone) {
+            if (req.body.isDone == true && req.body.assignee.length > 0) {
+                let getAccount = await Account.findOne({ username: req.body.assignee })
+                let storyPoint = getAccount.storyPoint + result.storyPointEstimate
+                await Account.findOneAndUpdate({ username: req.body.assignee }, { storyPoint: storyPoint })
+
+            }
+        }
         result && res.status(200).json("Update Task successfully")
+    } catch (err) {
+        return res.status(400).json(err.message)
+    }
+}
+
+exports.getStatusRate = async (req, res) => {
+    try {
+        if (!req.query) {
+            return res.status(400).json("Missing project ID");
+        }
+        const listName = await ListName.find({ projectID: req.query.projectId })
+        let statistical = []
+        const listColor = ['#97FFFF', '#FF0000', '#33FF00', '#00FF00', '#ffff', '#000']
+        let onComplete = 0
+        let temp = 0
+        for (let i of listName) {
+            const status = i.listName
+            let detail = await Task.find({ listNameId: i._id })
+            let getIsDone = await Task.find({ listNameId: i._id, isDone: true })
+            onComplete += getIsDone.length
+            statistical.push({
+                name: status,
+                listTask: detail,
+                population: detail.length,
+                color: (listColor[temp]),
+                legendFontColor: '#7F7F7F',
+                legendFontSize: 15,
+            })
+            temp++
+        }
+        statistical.push({
+            name: 'Complete',
+            population: onComplete,
+            color: '#008080',
+            legendFontColor: '#7F7F7F',
+            legendFontSize: 15,
+        })
+
+        return res.status(200).json(statistical)
+    } catch (err) {
+        return res.status(400).json(err.message)
+    }
+}
+
+exports.getMember = async (req, res) => {
+    try {
+        if (!req.query) {
+            return res.status(400).json("Missing project ID");
+        }
+
+        const listMembers = await Project.findOne({ _id: req.query.projectId })
+        console.log("listMembers: ", listMembers.members)
+        const detail = []
+        for (let i in listMembers.members) {
+            const mem = await Account.findOne({ username: listMembers.members[i].username })
+            console.log("mem: ", mem)
+            detail.push([++i, mem.username, mem.storyPoint])
+        }
+        return res.status(200).json(detail)
+    } catch (err) {
+        return res.status(400).json(err.message)
+    }
+}
+
+exports.getStatisticalTask = async (req, res) => {
+    try {
+        if (!req.query) {
+            return res.status(400).json("Missing project ID");
+        }
+        const getListName = await ListName.find({ projectID: req.query.projectId })
+        let result = []
+        for (let i in getListName) {
+            const detail = await Task.find({ listNameId: getListName[i]._id }).sort({ 'createdA': -1 })
+            console.log("detail: ", detail)
+            result = [...result, ...detail.reduce((prev, curr) =>
+                [...prev, [++i, curr.taskName, JSON.stringify(curr.isDone), curr.storyPointEstimate, curr.assignee[0]]]
+                , [])]
+        }
+        return res.status(200).json(result)
+    } catch (err) {
+        return res.status(400).json(err.message)
+    }
+}
+
+exports.get = async (req, res) => {
+    try {
+        const project = await Project.countDocuments()
+        const task = await Task.countDocuments()
+        const user = await Account.countDocuments()
+        const activity = await Activity.countDocuments()
+
+        //chart days
+        let Monday = 0
+        let Tuesday = 0
+        let Wednesday = 0
+        let Thursday = 0
+        let Friday = 0
+        let Saturday = 0
+
+        let t1 = 0
+        let t2 = 0
+        let t3 = 0
+        let t4 = 0
+        let t5 = 0
+        let t6 = 0
+        let t7 = 0
+        let t8 = 0
+        let t9 = 0
+        let t10 = 0
+        let t11 = 0
+        let t12 = 0
+        const chartCountTask = await Task.find()
+        // console.log("chartCountTask: ", chartCountTask)
+        for (let i of chartCountTask) {
+            const day = new Date(i.createdAt).getDay()
+            switch (day) {
+                case 1: Monday += 1
+                    break
+                case 2: Tuesday++
+                    break
+                case 3: Wednesday++
+                    break
+                case 4: Thursday++
+                    break
+                case 5: Friday++
+                    break
+                case 6: Saturday++
+                    break
+            }
+
+            const month = new Date(i.createdAt).getMonth()
+            switch (month) {
+                case 0: t1++
+                    break
+                case 1: t2++
+                    break
+                case 2: t3++
+                    break
+                case 3: t4++
+                    break
+                case 4: t5++
+                    break
+                case 5: t6++
+                    break
+                case 6: t7++
+                    break
+                case 7: t8++
+                    break
+                case 8: t9++
+                    break
+                case 9: t10++
+                    break
+                case 11: t12++
+                    break
+            }
+        }
+
+        let t1a = 0
+        let t2a = 0
+        let t3a = 0
+        let t4a = 0
+        let t5a = 0
+        let t6a = 0
+        let t7a = 0
+        let t8a = 0
+        let t9a = 0
+        let t10a = 0
+        let t11a = 0
+        let t12a = 0
+        const listTaskIsDone = await Task.find({ isDone: true })
+
+        for (let i of listTaskIsDone) {
+            const month = new Date(i.createdAt).getMonth()
+            switch (month) {
+                case 0: t1a++
+                    break
+                case 1: t2a++
+                    break
+                case 2: t3a++
+                    break
+                case 3: t4a++
+                    break
+                case 4: t5a++
+                    break
+                case 5: t6a++
+                    break
+                case 6: t7a++
+                    break
+                case 7: t8a++
+                    break
+                case 8: t9a++
+                    break
+                case 9: t10a++
+                    break
+                case 11: t12a++
+                    break
+            }
+        }
+
+        const listProject = await Project.find()
+
+        let resultListProject = []
+        for (let i of listProject) {
+            const listMember = []
+            for (let j of i.members) {
+                listMember.push(['team', j.username])
+            }
+            resultListProject.push({
+
+                name: i.projectName,
+                members: listMember
+            })
+
+        }
+        console.log("resultListProject: ", resultListProject)
+        return res.status(200).json({
+            project: project,
+            task: task,
+            user: user,
+            activity: activity,
+            Reports: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday],
+            Reports1: [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12],
+            Reports2: [t1a, t2a, t3a, t4a, t5a, t6a, t7a, t8a, t9a, t10a, t11a, t12a],
+            ListProject: resultListProject,
+        })
     } catch (err) {
         return res.status(400).json(err.message)
     }
